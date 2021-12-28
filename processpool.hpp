@@ -46,7 +46,7 @@ class processpool {
     private:
         processpool(int listenfd, int process_number = 8);
     public:
-        static processpool<T>* create(int listenfd, int process_number) {
+        static processpool<T>* create(int listenfd, int process_number = 8) {
             if(!m_instance) { //懒汉模式
                 m_instance = new processpool<T>(listenfd, process_number);
             }
