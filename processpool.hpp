@@ -161,7 +161,7 @@ void processpool<T>::run_child() {
             int sockfd = events[i].data.fd;
             if(sockfd == pipefd && (events[i].events& EPOLLIN)) {
                 int client = 0;
-                ret = recv(sockfd, (char*)&client, sizeof client, 0);
+                int ret = recv(sockfd, (char*)&client, sizeof client, 0);
                 if(ret == 0 || (ret < 0 && errno != EAGAIN)) {
                     continue;
                 }
@@ -173,7 +173,7 @@ void processpool<T>::run_child() {
                         printf("Errno is %d\n", errno);
                         continue;
                     }
-                    add(m_epollfd, connfd);
+                    addfd(m_epollfd, connfd);
                     //模板T必须实现一个init方法，依此初始化一个客户连接，之后用connfd索引操作对象
                     users[connfd].init(m_epollfd, connfd, client_address);
 
@@ -183,7 +183,7 @@ void processpool<T>::run_child() {
                 int sig;
                 //
                 char signals[1024];
-                ret = recv(sig_pipefd[0], signals, sizeof signals, 0);
+                int ret = recv(sig_pipefd[0], signals, sizeof signals, 0);
                 if(ret <= 0) {
                     continue;
                 }else {
@@ -192,7 +192,7 @@ void processpool<T>::run_child() {
                             case SIGCHLD: {
                                 pid_t pid;
                                 int stat;
-                                while((pid = waitpid(-1, &stat, WHOHANG)) > 0)
+                                while((pid = waitpid(-1, &stat, WNOHANG)) > 0)
                                     continue;
                                 break;    
                             }
@@ -277,7 +277,7 @@ void processpool<T>::run_parent() {
                         case SIGCHLD: {
                             pid_t pid;
                             int stat;
-                            while((pid = waitpid(-1, &stat, WHOHANG)) > 0) {
+                            while((pid = waitpid(-1, &stat, WNOHANG)) > 0) {
                                 for(int i = 0; i < m_process_number; i++) {
                                     if(pid == m_sub_process[i].m_pid) {
                                         printf("Child %d join\n", i);

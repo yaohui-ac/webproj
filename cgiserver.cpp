@@ -77,7 +77,7 @@ class cgi_conn {
                     else {
                         close(STDOUT_FILENO);
                         dup(m_sockfd);
-                        execl(m_buf, m_buf, 0);
+                        execl(m_buf, m_buf, NULL);
                         exit(0);
                     }
             
@@ -106,6 +106,7 @@ int main(int argc, char *argv[]) {
     ret = listen(listenfd, 5);
     assert(ret != -1);
     processpool<cgi_conn>* pool = processpool<cgi_conn>::create(listenfd);
+    //进程池对象，中间应是内含多个进程
     if(pool) {
         pool->run();
         delete pool;
