@@ -168,11 +168,64 @@ void processpool<T>::run_child() {
                 else {
                     struct sockaddr_in client_address;
                     socklen_t client_addrlength = sizeof client_address;
-                    
+                    int connfd = accept(m_listenfd, (sockaddr*)&client_address,&client_addrlength);
+                    if(connfd < 0) {
+                        printf("Errno is %d\n", errno);
+                        continue;
+                    }
+                    add(m_epollfd, connfd);
+                    //模板T必须实现一个init方法，依此初始化一个客户连接，之后用connfd索引操作对象
+                    users[connfd].init(m_epollfd, connfd, client_address);
+
+
                 }
+            }else if(sockfd == sig_pipefd[0] && (events[i].events & EPOLLIN)) {
+                int sig;
+                //
+                char signals[1024];
+                ret = recv(sig_pipefd[0], signals, sizeof signals, 0);
+                if(ret <= 0) {
+                    continue;
+                }else {
+                    for(int i = 0; i < ret; i++) {
+                        switch(signals[i]) {
+                            case SIGCHLD: {
+                                pid_t pid;
+                                int stat;
+                                while((pid = waitpid(-1, &stat, WHOHANG)) > 0)
+                                    continue;
+                                break;    
+                            }
+                            case SIGTERM:
+                            case SIGINT: {
+                                m_stop= true;
+                                break;
+                            }
+                            default: {
+                                break;
+                            }
+
+                        }
+                    }
+                }
+
+            }else if(events[i].events & EPOLLIN) { //用户请求，调用处理对象的process方法
+                users[sockfd].process(); //T类型需要包括的
+            }
+            else {
+                continue;
             }
         }
     }
+    delete[]users;
+    users = NULL;
+    close(pipefd);
+    //close(m_listenfd);
+    /*
+        应该由m_listenfd的创建者关闭这个文件描述符
+        对象或文件描述符，哪个函数打开，哪个函数关闭
+    */
+    close(m_epollfd);
 }
 
 
