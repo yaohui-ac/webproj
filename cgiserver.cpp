@@ -35,7 +35,11 @@ class cgi_conn {
             memset(m_buf, 0, BUFFER_SIZE);
             m_read_idx = 0;
         }
-        void process() {
+        void process() { 
+            /*
+                process是服务器功能核心，
+            
+            */
             int idx = 0;
             int ret = -1;
             while(true) {
@@ -52,38 +56,49 @@ class cgi_conn {
                     break;
                 }
                 else {
-                    m_read_idx += ret;
+                    m_read_idx += ret; //接收的末尾位置
                     printf("User content is %s\n", m_buf);
-                    for(; idx < m_read_idx; ++idx) {
+                    for(; idx < m_read_idx; ++idx) { //分析接收的数据
                         if(idx >= 1 && m_buf[idx - 1] == '\r' && m_buf[idx] == '\n') {
                             break;
                             //遇到\r\n开始处理客户数据
                         }
                     }
-                    if(idx == m_read_idx) { //需要读取更多客户数据
+                    puts("break point1: content");//----
+                    if(idx == m_read_idx) { //需要读取更多客户数据，已经越过循环结尾
                         continue;
                     }
                     char* file_name = m_buf;
-                    if(access(file_name, F_OK) == -1) {
+                    if(access(file_name, F_OK) == -1) { //access函数是否存在/可写/可读/可执行
                         //判断客户要运行的CGI程序是否存在
-                        removefd(m_epollfd, m_sockfd);
+                        puts("break point2: content");//----
+                        removefd(m_epollfd, m_sockfd); //移除socket,不再监听socket
+                        //应该关闭socket
+                        close(m_sockfd);
                         break;
                     }
                     ret = fork();
                     if(ret == -1) {
                         removefd(m_epollfd, m_sockfd);
+                        close(m_sockfd);
+                        break;
+                    }
+                    else if(ret > 0) { //父进程关闭连接,即一个连接只处理一次
+                        removefd(m_epollfd, m_sockfd);
+                        close(m_sockfd);
                         break;
                     }
                     else {
                         close(STDOUT_FILENO);
                         dup(m_sockfd);
-                        execl(m_buf, m_buf, NULL);
+                        execl(m_buf, m_buf, NULL);//发送的是文件名，将输出重定向至 客户端
                         exit(0);
                     }
             
                 }
 
             }
+            puts("end ppt");
         }
 };
 int cgi_conn::m_epollfd = -1;
@@ -95,7 +110,7 @@ int main(int argc, char *argv[]) {
     }
     const char*ip = argv[1];
     int port = atoi(argv[2]);
-    int listenfd = socket(PF_INET, SOCK_STREAM, 0);
+    int listenfd = socket(PF_INET, SOCK_STREAM, 0); //listenfd
     assert(listenfd >= 0);
     int ret = 0;
     sockaddr_in address;
@@ -105,6 +120,7 @@ int main(int argc, char *argv[]) {
     assert(ret != -1);
     ret = listen(listenfd, 5);
     assert(ret != -1);
+    
     processpool<cgi_conn>* pool = processpool<cgi_conn>::create(listenfd);
     //进程池对象，中间应是内含多个进程
     if(pool) {
@@ -112,6 +128,7 @@ int main(int argc, char *argv[]) {
         delete pool;
     }
     close(listenfd);
+
     return 0;
 }
 

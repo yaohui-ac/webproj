@@ -47,7 +47,7 @@ class processpool {
         processpool(int listenfd, int process_number = 8);
     public:
         static processpool<T>* create(int listenfd, int process_number = 8) {
-            if(!m_instance) { //懒汉模式
+            if(!m_instance) { //单例懒汉模式
                 m_instance = new processpool<T>(listenfd, process_number);
             }
             return m_instance;
@@ -99,6 +99,7 @@ template<typename T>
 processpool<T>:: processpool(int listenfd, int process_number): //构造函数
 m_listenfd(listenfd), m_process_number(process_number), m_idx(-1), m_stop(false)
 {
+    //监听套接字，子进程父进程共享，依靠传入
     assert(process_number > 0 && process_number <= MAX_PROCESS_NUMBER);
     m_sub_process = new process[process_number];
     assert(m_sub_process);
@@ -106,15 +107,15 @@ m_listenfd(listenfd), m_process_number(process_number), m_idx(-1), m_stop(false)
     for(int i = 0; i < process_number; i++) {
         int ret = socketpair(PF_UNIX, SOCK_STREAM, 0, m_sub_process[i].m_pipefd);
         assert(ret == 0);
-        m_sub_process[i].m_pid = fork(); //返回2次，尽在父进程保存
+        m_sub_process[i].m_pid = fork(); //返回2次，进程号在父进程保存
         assert(m_sub_process[i].m_pid >= 0);
         if(m_sub_process[i].m_pid > 0) {
-            close(m_sub_process[i].m_pipefd[1]);
+            close(m_sub_process[i].m_pipefd[1]); //父进程占用 fd[0]
             continue;
         }//父进程
         else {
             close(m_sub_process[i].m_pipefd[0]);
-            m_idx = i; //第i个线程
+            m_idx = i; //第i个进程,子进程退出，m_idx将作为子进程的编号，对象中的内存，不同进程也是有不同地址空间的
             break; //创建完毕
         }
     }
@@ -123,8 +124,10 @@ template<typename T>
 void processpool<T>::setup_sig_pipe() { //事件监听表
 
     m_epollfd = epoll_create(5);
+    //进程注册epoll，监听
     assert(m_epollfd != -1);
     int ret = socketpair(PF_UNIX, SOCK_STREAM, 0, sig_pipefd);
+    //信号管道，监听
     assert(ret != -1);
     setnonblocking(sig_pipefd[1]);
     addfd(m_epollfd, sig_pipefd[0]);
@@ -136,7 +139,7 @@ void processpool<T>::setup_sig_pipe() { //事件监听表
 } 
 template<typename T>
 void processpool<T>::run() {
-    if(m_idx != -1) {
+    if(m_idx != -1) { //构造函数中已经标了父子进程，-1为父进程，分成了父子进程的run
         run_child();
         return;
     }
@@ -148,11 +151,13 @@ void processpool<T>::run_child() {
     int pipefd = m_sub_process[m_idx].m_pipefd[1];
     addfd(m_epollfd, pipefd);
     epoll_event events[MAX_EVENT_NUMBER];
-    T*users = new T[USER_PER_PROCESS];
+    T*users = new T[USER_PER_PROCESS]; //一个进程可以处理的用户数
     assert(users);
     int number = 0;
     while(!m_stop) {
         number = epoll_wait(m_epollfd, events, MAX_EVENT_NUMBER, -1);
+        printf("hh ");
+        //只有刚开始运行时,进程切换比较多,子进程将运行到此阻塞
         if(number < 0 && errno != EINTR) {
             printf("Epoll failure\n");
             break;
@@ -160,8 +165,10 @@ void processpool<T>::run_child() {
         for(int i = 0; i < number; i++) {
             int sockfd = events[i].data.fd;
             if(sockfd == pipefd && (events[i].events& EPOLLIN)) {
+                //父进程发送的到来
                 int client = 0;
                 int ret = recv(sockfd, (char*)&client, sizeof client, 0);
+                //父进程发送的，和子进程接收的仅仅代表一种约定。代表子进程可以去接收一个客户端请求
                 if(ret == 0 || (ret < 0 && errno != EAGAIN)) {
                     continue;
                 }
@@ -174,12 +181,11 @@ void processpool<T>::run_child() {
                         continue;
                     }
                     addfd(m_epollfd, connfd);
-                    //模板T必须实现一个init方法，依此初始化一个客户连接，之后用connfd索引操作对象
+                    //模板T必须实现一个init方法，初始化一个客户连接，之后用connfd索引操作对象
                     users[connfd].init(m_epollfd, connfd, client_address);
 
-
                 }
-            }else if(sockfd == sig_pipefd[0] && (events[i].events & EPOLLIN)) {
+            }else if(sockfd == sig_pipefd[0] && (events[i].events & EPOLLIN)) {//处理信号
                 int sig;
                 //
                 char signals[1024];
@@ -198,7 +204,7 @@ void processpool<T>::run_child() {
                             }
                             case SIGTERM:
                             case SIGINT: {
-                                m_stop= true;
+                                m_stop = true;
                                 break;
                             }
                             default: {
@@ -210,7 +216,8 @@ void processpool<T>::run_child() {
                 }
 
             }else if(events[i].events & EPOLLIN) { //用户请求，调用处理对象的process方法
-                users[sockfd].process(); //T类型需要包括的
+                users[sockfd].process(); //T类型需要包括
+                //puts("break to here");
             }
             else {
                 continue;
@@ -232,7 +239,7 @@ template<typename T>
 void processpool<T>::run_parent() {
     setup_sig_pipe(); //父进程监听m_listenfd
     addfd(m_epollfd, m_listenfd);
-    epoll_event events[MAX_EVENT_NUMBER];
+    epoll_event events[MAX_EVENT_NUMBER]; 
     int sub_process_counter = 0;
     int new_conn = 1;
     int number = 0;
@@ -251,18 +258,20 @@ void processpool<T>::run_parent() {
                 int i = sub_process_counter;
                 do {
                     if(m_sub_process[i].m_pid != -1) {
-                        break;
+                        break; //选中
                     }
                     i = (i + 1)%m_process_number;
-                }while(i != sub_process_counter);
+                }while(i != sub_process_counter); //轮转一周
 
-                if(m_sub_process[i].m_pid == -1) {
+                if(m_sub_process[i].m_pid == -1) { //
                     m_stop = true;
                     break;
                 }
                 sub_process_counter = (i + 1)% m_process_number;
                 send(m_sub_process[i].m_pipefd[0], (char*)&new_conn, sizeof new_conn, 0);
+                //通过管道发送给子线程
                 printf("Send request to child %d\n", i);
+
             }
             else if(sockfd == sig_pipefd[0] && (events[i].events & EPOLLIN)) {
                 //处理父进程接收的信号
@@ -309,6 +318,7 @@ void processpool<T>::run_parent() {
                         }
                     }
                 }
+                
             }else {
                 continue;
             }

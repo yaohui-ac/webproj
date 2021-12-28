@@ -1,5 +1,5 @@
-namec = $(wildcard *.c)
-nameo = $(patsubst %.c, %.o ,$(src))
+namec = $(wildcard *.cpp)
+nameo = $(patsubst %.cpp, %.o ,$(src))
 
 ALL: cgiserver
 
@@ -9,5 +9,5 @@ cgiserver.o: cgiserver.cpp
 	g++ -c cgiserver.cpp -o cgiserver.o
 
 clean:
-	-rm -rf	$(nameo) 	
+	rm -rf	$(nameo) 	
 
