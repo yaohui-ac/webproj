@@ -64,14 +64,14 @@ class cgi_conn {
                             //遇到\r\n开始处理客户数据
                         }
                     }
-                    puts("break point1: content");//----
+                   
                     if(idx == m_read_idx) { //需要读取更多客户数据，已经越过循环结尾
                         continue;
                     }
                     char* file_name = m_buf;
                     if(access(file_name, F_OK) == -1) { //access函数是否存在/可写/可读/可执行
                         //判断客户要运行的CGI程序是否存在
-                        puts("break point2: content");//----
+                        
                         removefd(m_epollfd, m_sockfd); //移除socket,不再监听socket
                         //应该关闭socket
                         close(m_sockfd);
@@ -98,7 +98,7 @@ class cgi_conn {
                 }
 
             }
-            puts("end ppt");
+          
         }
 };
 int cgi_conn::m_epollfd = -1;

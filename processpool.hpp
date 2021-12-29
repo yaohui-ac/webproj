@@ -156,7 +156,7 @@ void processpool<T>::run_child() {
     int number = 0;
     while(!m_stop) {
         number = epoll_wait(m_epollfd, events, MAX_EVENT_NUMBER, -1);
-        printf("hh ");
+    
         //只有刚开始运行时,进程切换比较多,子进程将运行到此阻塞
         if(number < 0 && errno != EINTR) {
             printf("Epoll failure\n");
