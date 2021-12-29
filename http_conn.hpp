@@ -17,6 +17,7 @@
 #include<sys/mman.h>
 #include<stdarg.h>
 #include<errno.h>
+#include<sys/uio.h>
 #include"lock.hpp"
 
 class http_conn {
@@ -40,7 +41,7 @@ class http_conn {
             FORBIDDEN_REQUEST, FILE_REQUEST, INTERNAL_ERROR,
             CLOSED_CONNECTION
         };
-        enum LINTSTATUS {
+        enum LINE_STATUS {
             LINE_OK = 0, LINE_BAD, LINE_OPEN
         };
 
@@ -50,14 +51,17 @@ class http_conn {
         bool process_write(HTTP_CODE ret); //填充http应答
         HTTP_CODE parse_request_line(char*text); /*将被用于分析http请求*/
         HTTP_CODE parse_headers(char*text); /*将被用于分析http请求*/
+        HTTP_CODE parse_content(char*text);
         HTTP_CODE do_request(); /*将被用于分析http请求*/
-        char* get_line() {return m_read_buf + m_start_line}; /*将被用于分析http请求*/
+        char* get_line() {  return m_read_buf + m_start_line; }; /*将被用于分析http请求*/
+        LINE_STATUS parse_line();
         /*以下函数将被 process_write调用，填充HTTP应答*/
         void unmap();
         bool add_response(const char* format, ...);
         bool add_content(const char* content);
         bool add_status_line(int status, const char* title);
         bool add_headers(int content_length);
+        bool add_content_length(int content_length);
         bool add_linger();
         bool add_blank_line();
         int m_sockfd; //连接的socket
