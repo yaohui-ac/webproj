@@ -69,9 +69,13 @@ class cgi_conn {
                         continue;
                     }
                     char* file_name = m_buf;
+                    file_name[idx - 1] = '\0';
+                    file_name[idx] = '\0';
                     if(access(file_name, F_OK) == -1) { //access函数是否存在/可写/可读/可执行
                         //判断客户要运行的CGI程序是否存在
                         
+                        const char mess[] = "No this filename\n"; 
+                        send(m_sockfd, mess, strlen(mess), 0);
                         removefd(m_epollfd, m_sockfd); //移除socket,不再监听socket
                         //应该关闭socket
                         close(m_sockfd);
@@ -116,6 +120,8 @@ int main(int argc, char *argv[]) {
     sockaddr_in address;
     bzero(&address, sizeof address);
     address.sin_family = AF_INET;
+    address.sin_port = htons(port);
+    inet_pton(AF_INET, ip , &address.sin_addr);
     ret = bind(listenfd, (sockaddr*)&address, sizeof address);
     assert(ret != -1);
     ret = listen(listenfd, 5);

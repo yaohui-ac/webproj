@@ -67,8 +67,8 @@ bool threadpool<T>::append(T* request) {
 }
 
 template<typename T>
-void* threadpool<T>::worker(void* arg) {
-    threadpool* pool = static_cast<threadpool*>arg;
+void* threadpool<T>::worker(void* arg) { //传入this指针
+    threadpool* pool = static_cast<threadpool*>(arg);
     pool->run();
     return pool; 
 }

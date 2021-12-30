@@ -32,17 +32,24 @@ class http_conn {
             TRACE, OPTIONS, CONNECT, PATCH 
         };
         enum CHECK_STATE { //解析客户请求时，主状态机状态
-            CHECK_STATE_REQUESTLINE = 0,
-            CHECK_STATE_HEADER,
-            CHECK_STATE_CONTENT
+            CHECK_STATE_REQUESTLINE = 0, //分析请求行
+            CHECK_STATE_HEADER, //分析请求头部字段
+            CHECK_STATE_CONTENT //分析内容
         };
         enum HTTP_CODE { //服务器处理http请求可能的结果
-            NO_REQUEST, GET_REQUEST, BAD_REQUEST, NO_RESOURCE,
-            FORBIDDEN_REQUEST, FILE_REQUEST, INTERNAL_ERROR,
-            CLOSED_CONNECTION
+            NO_REQUEST,//请求不完整，需要继续读取客户数据
+            GET_REQUEST,//获得了完整的客户请求
+            BAD_REQUEST, //客户请求有语法错误
+            NO_RESOURCE, //404无资源
+            FORBIDDEN_REQUEST, //客户对资源无足够访问权限
+            FILE_REQUEST, 
+            INTERNAL_ERROR,// 服务器内部错误
+            CLOSED_CONNECTION//客户端已经关闭连接
         };
         enum LINE_STATUS {
-            LINE_OK = 0, LINE_BAD, LINE_OPEN
+            LINE_OK = 0, //读取了完整行
+            LINE_BAD,  //行出错
+            LINE_OPEN //不完整
         };
 
     private:

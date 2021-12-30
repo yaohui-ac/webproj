@@ -48,13 +48,14 @@ int main(int argc, char* argv[]) {
     catch(...) {
         return 1;
     }
+    
     http_conn* users = new http_conn[MAX_FD];
-    //预先分配
+    //预先分配客户连接的资源，缓冲区等
     assert(users);
     int user_count = 0;
     int listenfd = socket(PF_INET, SOCK_STREAM, 0);
     assert(listenfd >= 0);
-    struct linger tmp = {1, 0};
+    struct linger tmp = {1, 0}; //发送RST, 将避免TIME_WAIT状态，将缓冲区残留数据丢弃
     setsockopt(listenfd, SOL_SOCKET, SO_LINGER, &tmp, sizeof tmp);
     int ret = 0;
     sockaddr_in address;
@@ -70,6 +71,7 @@ int main(int argc, char* argv[]) {
     int epollfd = epoll_create(5);
     assert(epollfd != -1);
     http_conn::m_epollfd = epollfd;
+    addfd(epollfd, listenfd, false);
     while(true) {
         int number = epoll_wait(epollfd, events, MAX_EVENT_NUMBER,  -1);
         if(number < 0 && errno != EINTR) {
@@ -92,22 +94,27 @@ int main(int argc, char* argv[]) {
                 }
                 users[connfd].init(connfd, client_address);
             }
+
             else if(events[i].events&(EPOLLRDHUP|EPOLLHUP|EPOLLERR)) {
-                users[sockfd].close_conn(); // 关闭连接
+                users[sockfd].close_conn(); // 关闭连接,出现了错误
             }
+
             else if(events[i].events & EPOLLIN) {
                 if(users[sockfd].read()) {
-                    pool->append(users + sockfd);
+                    pool->append(users + sockfd); //丢入队列
                 }
                 else {
                     users[sockfd].close_conn();
                 }
             }
+
             else if(events[i].events & EPOLLOUT) {
-                if(!users[sockfd].write()) {
+                if(!users[sockfd].write()) { //false，关闭连接
                     users[sockfd].close_conn();
                 }
-            }else {
+            }
+
+            else {
 
             }
         }
