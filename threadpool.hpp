@@ -42,7 +42,7 @@ m_stop(false), m_threads(NULL)
         }
         if(pthread_detach(m_threads[i])) {
             delete []m_threads;
-            throw std::exception();
+            throw std::exception(); 
         }
     } 
 }

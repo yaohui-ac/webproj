@@ -1,13 +1,13 @@
 #include"http_conn.hpp"
-const char* ok_200_title = "OK";
-const char* error_400_title = "BAD Request";
-const char* error_400_form = "Your request has bad syntax or is inherently impossible to satisfy.\n";
-const char* error_403_title = "Forbidden";
-const char* error_403_form = "You don not have permission to get file from this server.\n";
-const char* error_404_title = "Not Found";
-const char* error_404_form = "The requested file was not found on this server.\n";
+const char* ok_200_title = "OK\r\n";
+const char* error_400_title = "BAD Request\r\n";
+const char* error_400_form = "Your request has bad syntax or is inherently impossible to satisfy.\r\n";
+const char* error_403_title = "Forbidden\r\n";
+const char* error_403_form = "You don not have permission to get file from this server.\r\n";
+const char* error_404_title = "Not Found\r\n";
+const char* error_404_form = "The requested file was not found on this server.\r\n";
 const char* error_500_title = "Internal Error";
-const char* error_500_form = "There was an unusual problem serving the requested file.\n";
+const char* error_500_form = "There was an unusual problem serving the requested file.\r\n";
 
 const char* doc_root = "/var/www/html"; //网站根目录
 int 
@@ -269,7 +269,7 @@ http_conn:: HTTP_CODE http_conn:: process_read() {
 http_conn:: HTTP_CODE http_conn:: do_request() {
     /* 获得完整http请求后,就分析目标文件属性，进行映射
     */
-   char* pwd = "/root/webproj/dirfile";
+   char* pwd = "/root/webproj/dirfile"; // 文件所在目录 
    strcpy(m_real_file, pwd);
    int len = strlen(pwd);
    strncpy(m_real_file + len, m_url, FILENAME_LEN - len - 1); //m_real_file为完整文件名路径
@@ -434,11 +434,11 @@ void http_conn::process() {
         modfd(m_epollfd, m_sockfd, EPOLLIN);
         return;
     }
-    puts("yalei-yalei");
+
     bool write_ret = process_write(read_ret);
     printf("%s\n",write_ret?"Yep":"No");
     if(!write_ret) {
-        puts("kkk");
+       
         close_conn();
     }
     modfd(m_epollfd, m_sockfd, EPOLLOUT); //准备写入
