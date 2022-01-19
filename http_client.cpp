@@ -100,6 +100,7 @@ PARSE_HTTP parse_header(const char* line, int cnt) {
     }
        http_state::file_size = atoi(line + 15);
    }
+
    else if(cnt == 2) {
        if(str.find("Connection:") == std::string::npos) {
             puts("header error: no connection");
