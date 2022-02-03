@@ -9,8 +9,7 @@
 #include<stdlib.h>
 #include<assert.h>
 #include<sys/epoll.h>
-#include<fstream>
-#include<string>
+#include"initserver.hpp"
 #include"lock.hpp"
 #include"threadpool.hpp"
 #include"http_conn.hpp"
@@ -18,42 +17,7 @@
 #define MAX_EVENT_NUMBER 10000
 extern int addfd(int epollfd, int fd, bool one_shot);
 extern int removefd(int epollfd, int fd);
-
-namespace server_config {
-    bool isdamon;
-    std::string ip;
-    int port;
-    void readconf(const char* filename = "./conf") {
-        std::fstream f_sm(filename);
-        std::string str;
-        while(getline(f_sm, str)) {
-            if(str.substr(0, 7) == "isdamon") {
-                assert(str.size() >= 9);
-                isdamon = str[8] - '0';
-            }
-            else if(str.substr(0, 2) == "ip") {
-                assert(str.size() >= 10);
-                ip = str.substr(3);
-            }
-            else if(str.substr(0, 4) == "port") {
-                assert(str.size() >= 6);
-                port = stol(str.substr(5));
-            }
-        }
-       
-    }
-   void init_server(int argc, char* argv[]) {
-       /*
-        读取配置文件
-        设置地址等信息
-       */
-      if(argc < 2)
-        readconf();
-      else 
-        readconf(argv[1]);
-          
-   }  
-}
+using server_config::listenfd;
 
 void addsig(int sig, void(handler)(int), bool restart = true) {
     struct sigaction sa;
@@ -72,13 +36,9 @@ void show_error(int connfd, const char* info) {
 }
 
 int main(int argc, char* argv[]) {
-    if(argc <= 2) {
-        printf("Usage: %s ip address port number", basename(argv[0]));
-        return 1;
-    }
-    const char* ip = argv[1];
-    int port = atoi(argv[2]);
+   
     addsig(SIGPIPE, SIG_IGN);
+    server_config::init_server(argc, argv);
     threadpool<http_conn>* pool = NULL;
     try {
         pool = new threadpool<http_conn>; 
@@ -91,20 +51,7 @@ int main(int argc, char* argv[]) {
     //预先分配客户连接的资源，缓冲区等
     assert(users);
     int user_count = 0;
-    int listenfd = socket(PF_INET, SOCK_STREAM, 0);
-    assert(listenfd >= 0);
-    struct linger tmp = {1, 0}; //发送RST, 将避免TIME_WAIT状态，将缓冲区残留数据丢弃
-    setsockopt(listenfd, SOL_SOCKET, SO_LINGER, &tmp, sizeof tmp);
-    int ret = 0;
-    sockaddr_in address;
-    bzero(&address, sizeof address);
-    address.sin_family = AF_INET;
-    inet_pton(AF_INET, ip , &address.sin_addr);
-    address.sin_port = htons(port);
-    ret = bind(listenfd, (sockaddr*)& address, sizeof address);
-    assert(ret >= 0);
-    ret = listen(listenfd, 5);
-    assert(ret >= 0);
+    
     epoll_event events[MAX_EVENT_NUMBER];
     int epollfd = epoll_create(5);
     assert(epollfd != -1);
