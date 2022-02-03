@@ -9,6 +9,8 @@
 #include<stdlib.h>
 #include<assert.h>
 #include<sys/epoll.h>
+#include<fstream>
+#include<string>
 #include"lock.hpp"
 #include"threadpool.hpp"
 #include"http_conn.hpp"
@@ -16,6 +18,42 @@
 #define MAX_EVENT_NUMBER 10000
 extern int addfd(int epollfd, int fd, bool one_shot);
 extern int removefd(int epollfd, int fd);
+
+namespace server_config {
+    bool isdamon;
+    std::string ip;
+    int port;
+    void readconf(const char* filename = "./conf") {
+        std::fstream f_sm(filename);
+        std::string str;
+        while(getline(f_sm, str)) {
+            if(str.substr(0, 7) == "isdamon") {
+                assert(str.size() >= 9);
+                isdamon = str[8] - '0';
+            }
+            else if(str.substr(0, 2) == "ip") {
+                assert(str.size() >= 10);
+                ip = str.substr(3);
+            }
+            else if(str.substr(0, 4) == "port") {
+                assert(str.size() >= 6);
+                port = stol(str.substr(5));
+            }
+        }
+       
+    }
+   void init_server(int argc, char* argv[]) {
+       /*
+        读取配置文件
+        设置地址等信息
+       */
+      if(argc < 2)
+        readconf();
+      else 
+        readconf(argv[1]);
+          
+   }  
+}
 
 void addsig(int sig, void(handler)(int), bool restart = true) {
     struct sigaction sa;
