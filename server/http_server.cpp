@@ -17,7 +17,7 @@
 #define MAX_EVENT_NUMBER 10000
 extern int addfd(int epollfd, int fd, bool one_shot);
 extern int removefd(int epollfd, int fd);
-using server_config::listenfd;
+using server_config::listenfd; // 监听套接字
 
 void addsig(int sig, void(handler)(int), bool restart = true) {
     struct sigaction sa;

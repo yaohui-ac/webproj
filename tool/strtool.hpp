@@ -1,3 +1,6 @@
+#ifndef STR_TOOL_HPP
+#define STR_TOOL_HPP
+
 #include<string.h>
 #include<string>
 #include<vector>
@@ -77,4 +80,4 @@ std:: vector<std::string> strsplit(const char* str, char sign) {
     return ret;
 }
 
-
+#endif
