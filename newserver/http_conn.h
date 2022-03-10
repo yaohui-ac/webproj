@@ -21,11 +21,11 @@
 #include <sys/wait.h>
 #include <sys/uio.h>
 #include <map>
-
+#include "work.h"
 #include "redis.h"
 #include "lock.h"
 #include "mysql.h"
-class http_conn{
+class http_conn : public work {
     static const int FILENAME_LEN = 200;
     static const int READ_BUFFER_SIZE = 2048;
     static const int WRITE_BUFFER_SIZE = 1024;
@@ -49,7 +49,7 @@ class http_conn{
 
         void close_conn( bool real_close = true );
 
-        void process();
+        void process() override;
 
         bool read();
 

@@ -7,6 +7,10 @@
 #include<fcntl.h>
 #include<unistd.h>
 class buffer {
+    /*
+        目标:
+        1. 可扩容 2. 支持linux API
+    */
     private:
        size_t _size;
     public:
@@ -44,6 +48,13 @@ class buffer {
             }
             return *this;
         }
+        void expandSize() {
+            char* tmp = new char[_size * 2];
+            for(int i = 0; i < _size; i++)
+                tmp[i] = buf[i];
+            delete[] buf;
+            buf = tmp;    
+        }
         char& operator[](int pos) {
             assert(pos < this->_size);
             return buf[pos];   
@@ -51,6 +62,7 @@ class buffer {
         size_t size() const {
             return _size;
         }
+
         void BufToFile(const char* filename, int flags, mode_t mode, int begin = 0, int end = -1) {
             if(end == -1)
                 end = _size; 

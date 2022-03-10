@@ -28,9 +28,9 @@ int main( int argc, char *argv[] ) {
     initconfig(argc, argv);
 
     addsig( SIGPIPE, SIG_IGN );
-    threadpool< http_conn >* pool = NULL;
+    threadpool< work >* pool = NULL;
     try{
-        pool = new threadpool< http_conn >;
+        pool = new threadpool< work >;
     }catch(...){
         return 1;
     }

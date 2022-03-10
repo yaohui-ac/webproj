@@ -677,7 +677,7 @@ bool http_conn::process_write(HTTP_CODE ret)
     m_iv_count = 1;
     return true;
 }
-void http_conn::process()
+void http_conn::process() 
 {
     HTTP_CODE read_ret = process_read();
     if (read_ret == NO_REQUEST)

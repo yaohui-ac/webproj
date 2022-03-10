@@ -8,8 +8,8 @@ class sem { //信号量
     private:
         sem_t m_sem;
     public:
-        sem() {
-            if(sem_init(&m_sem, 0, 0) != 0) //value = 0
+        sem(int value = 0) {
+            if(sem_init(&m_sem, 0, value) != 0) //value = 0
                 throw std::exception();       
         }
         ~sem() {

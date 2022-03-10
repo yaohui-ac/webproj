@@ -18,8 +18,11 @@
 #include<stdarg.h>
 #include<errno.h>
 #include<sys/uio.h>
+#include<map>
+#include<string>
+#include"../sqlpool/sql_connection_pool.h"
 #include"lock.hpp"
-
+using std::string;
 class http_conn {
     public:
         static int m_epollfd; //所有socket上的事件都被注册到同一个epoll中
@@ -100,6 +103,7 @@ class http_conn {
         void process();//处理客户请求
         bool read();//非阻塞读
         bool write();//非阻塞写
+        void http_conn::initmysql_result(connection_pool *connPool);
 
 };
 #endif

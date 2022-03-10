@@ -13,6 +13,7 @@
 #include"lock.hpp"
 #include"threadpool.hpp"
 #include"http_conn.hpp"
+#include"../sqlpool/sql_connection_pool.h"
 #define MAX_FD 65536
 #define MAX_EVENT_NUMBER 10000
 extern int addfd(int epollfd, int fd, bool one_shot);
@@ -39,6 +40,7 @@ int main(int argc, char* argv[]) {
    
     addsig(SIGPIPE, SIG_IGN);
     server_config::init_server(argc, argv);
+
     threadpool<http_conn>* pool = NULL;
     try {
         pool = new threadpool<http_conn>; 
@@ -46,6 +48,8 @@ int main(int argc, char* argv[]) {
     catch(...) {
         return 1;
     }
+    
+
     
     http_conn* users = new http_conn[MAX_FD];
     //预先分配客户连接的资源，缓冲区等
@@ -65,7 +69,7 @@ int main(int argc, char* argv[]) {
         }
         for(int i = 0; i < number; i++) {
             int sockfd = events[i].data.fd;
-            if(sockfd == listenfd) {
+            if(sockfd == listenfd) { //这里增加认证/登录功能
                 sockaddr_in client_address;
                 socklen_t client_addrlength = sizeof client_address;
                 int connfd = accept(listenfd, (sockaddr*)& client_address, &client_addrlength);
@@ -76,7 +80,7 @@ int main(int argc, char* argv[]) {
                 if(http_conn::m_user_count >= MAX_FD) {
                     show_error(connfd, "Internal server busy");
                     continue;
-                }
+                }          
                 users[connfd].init(connfd, client_address);
             }
 

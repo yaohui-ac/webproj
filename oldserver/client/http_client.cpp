@@ -114,11 +114,20 @@ PARSE_HTTP parse_header(const char* line, int cnt) {
    }
    
 }
+void generateFile(const char* filename, int flags, mode_t mode, int begin) {
+    
+    int fd = open(filename, flags, mode);
+    assert(fd >= 0);
+    write(fd, buf + begin, http_state::file_size);
+    close(fd);
+}  
 PARSE_HTTP parse_content(const char* line) {
     if(http_state::httpstatus != 200) {
         puts(line);
         return PARSE_OK;
     }
+    
+
 }
 void parse(int fd) {
     int read_idx = 0;
@@ -148,6 +157,7 @@ void parse(int fd) {
         }
         else if(line_status == LINE_BAD) {
             // 处理line_bad
+            parse_content(buf + parse_idx);
         }
       
         switch(state) {
@@ -167,20 +177,20 @@ void parse(int fd) {
                 }
                 cnt++;
                 if(cnt == 4) {
-                    state = CHECK_STATE_CONTENT;
                     write_idx = parse_idx;
+                    state = CHECK_STATE_CONTENT;
                 }
                    
                 break;
             }
             case CHECK_STATE_CONTENT: {
-
                 break;
             }
         }
         
         line_begin = parse_idx;
     }
+        generateFile(filename, O_CREAT|O_RDWR, 0666, line_begin);
 
 }
 int main (int argc, char* argv[]) {
